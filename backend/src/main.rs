@@ -77,7 +77,10 @@ const MAX_TEXT_LENGTH: usize = 5000;  // 5000 characters should be reasonable fo
 /// Handles requests to the paraphrase endpoint
 ///
 /// Accepts text input and returns a paraphrased version using OpenAI's API
-async fn paraphrase_text(request: web::Json<ParaphraseRequest>) -> impl Responder {
+async fn paraphrase_text(
+    request: web::Json<ParaphraseRequest>,
+    secrets: web::Data<Option<shuttle_runtime::SecretStore>>,
+) -> impl Responder {
     let text = request.text.trim();  // Manual trimming
 
     // Input validation
@@ -98,7 +101,7 @@ async fn paraphrase_text(request: web::Json<ParaphraseRequest>) -> impl Responde
     info!("Processing text of length: {}", text.len());
     
     // Load OpenAI API key from environment variables
-    let api_key = match get_openai_api_key() {
+    let api_key = match get_openai_api_key(secrets.get_ref()) {
         Ok(key) => key,
         Err(response) => return response,
     };
@@ -146,9 +149,27 @@ async fn welcome() -> impl Responder {
 // Helper Functions
 //-----------------------------------------------------------------------------
 
-/// Retrieves the OpenAI API key from Secrets.toml
-fn get_openai_api_key() -> Result<String, HttpResponse> {
-    // Try to read from Secrets.toml
+/// Retrieves the OpenAI API key from environment variables or Secrets.toml
+fn get_openai_api_key(secrets: &Option<shuttle_runtime::SecretStore>) -> Result<String, HttpResponse> {
+    // First try to get the key from the SecretStore if available
+    if let Some(secret_store) = secrets {
+        if let Some(key) = secret_store.get("OPENAI_API_KEY") {
+            if !key.is_empty() {
+                info!("Using OpenAI API key from Shuttle SecretStore");
+                return Ok(key);
+            }
+        }
+    }
+
+    // Then try to get the key from environment variables
+    if let Ok(key) = env::var("OPENAI_API_KEY") {
+        if !key.is_empty() {
+            info!("Using OpenAI API key from environment variables");
+            return Ok(key);
+        }
+    }
+    
+    // Fall back to reading from Secrets.toml
     let secrets_paths = vec![
         "Secrets.toml",
         "backend/Secrets.toml",
@@ -165,6 +186,7 @@ fn get_openai_api_key() -> Result<String, HttpResponse> {
                         let value = parts[1].trim();
                         // Remove surrounding quotes if present
                         let key = value.trim_matches(|c| c == '\'' || c == '"');
+                        info!("Using OpenAI API key from Secrets.toml");
                         return Ok(key.to_string());
                     }
                 }
@@ -173,8 +195,8 @@ fn get_openai_api_key() -> Result<String, HttpResponse> {
     }
     
     // If we get here, the key wasn't found
-    error!("OPENAI_API_KEY not found in Secrets.toml");
-    Err(HttpResponse::InternalServerError().body("OpenAI API key not configured in Secrets.toml"))
+    error!("OPENAI_API_KEY not found in SecretStore, environment variables, or Secrets.toml");
+    Err(HttpResponse::InternalServerError().body("OpenAI API key not configured. Please set OPENAI_API_KEY in Shuttle Secrets, environment variables, or add it to Secrets.toml"))
 }
 
 /// Creates an OpenAI API request for paraphrasing the given text
@@ -245,8 +267,13 @@ async fn process_successful_response(
 
 /// Main entry point for the Shuttle runtime
 #[shuttle_runtime::main]
-async fn shuttle_main() -> shuttle_actix_web::ShuttleActixWeb<impl Fn(&mut web::ServiceConfig) + Send + Clone + 'static> {
+async fn shuttle_main(
+    #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
+) -> shuttle_actix_web::ShuttleActixWeb<impl Fn(&mut web::ServiceConfig) + Send + Clone + 'static> {
     info!("Initializing application...");
+
+    // Store secrets in app data
+    let secrets_option = Some(secrets);
 
     let app = move |cfg: &mut web::ServiceConfig| {
         // Configure CORS to allow requests from any origin
@@ -257,12 +284,13 @@ async fn shuttle_main() -> shuttle_actix_web::ShuttleActixWeb<impl Fn(&mut web::
             .max_age(3600);
             
         debug!("Configuring CORS and routes");
-        cfg.service(
-            web::scope("")
-                .wrap(cors)
-                .route("/", web::get().to(welcome))
-                .route("/paraphrase", web::post().to(paraphrase_text))
-        );
+        cfg.app_data(web::Data::new(secrets_option.clone()))
+           .service(
+                web::scope("")
+                    .wrap(cors)
+                    .route("/", web::get().to(welcome))
+                    .route("/paraphrase", web::post().to(paraphrase_text))
+            );
         info!("Routes configured successfully");
     };
 
