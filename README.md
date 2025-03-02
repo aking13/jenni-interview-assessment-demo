@@ -155,3 +155,15 @@ For more detailed information about Vercel deployment, visit the [Vercel documen
 ### Frontend
 
 - `VITE_API_URL`: URL of the backend API
+
+## Architecture Justification
+
+For this project, I focused on creating an initial MVP that prioritizes clean code, good logging, and a solid foundation for future extensions. I structured the application with a clear separation between frontend and backend to keep concerns distinct and maintainable.
+
+I particularly enjoy working with Vite for my React and Typescript projects because it's fast and minimal. The hot module reloading and optimized builds are also a productivity plus in during development. For deployment, Shuttle made the Rust backend deployment trivial, allowing me to focus more on the actual implementation within the time constraints.
+
+In terms of tradeoffs, I chose to keep the UI minimal but functional to deliver the core requirements efficiently. While this approach sacrifices some visual polish, it allowed me to focus on the essential functionality. We can add more features and visual polish now that we have a solid foundation that has tests and clear deployment protocols.Similarly, I opted for a stateless application without persistence to simplify the initial implementation, though this would be a natural extension point for a production version.
+
+If this were a real product with more development time, I'd consider adding authentification, expanding the AI capabilities beyond just paraphrasing (which honestly can be as simple as updating our rust paraphrasing API call to take a prompt as an argument which determines what sort of editing we want the AI to do). I'd also look into performance optimizations like caching and potentially adding analytics to understand user behavior better.
+
+The current implementation is straightforward and provides a solid starting point that can grow without requiring a complete redesign, which was important to me when making architectural decisions.
