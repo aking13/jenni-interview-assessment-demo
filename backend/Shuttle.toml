@@ -1,0 +1,7 @@
+[default]
+# Production environment settings
+RUST_LOG = "error"  # Only show error and above in production
+
+[default.debug]
+# Development environment settings
+RUST_LOG = "debug"  # Show all logs in development 

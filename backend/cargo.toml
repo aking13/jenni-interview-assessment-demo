@@ -1,0 +1,25 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+actix-cors = "0.6"
+rand = "0.8"
+shuttle-runtime = "0.52.0"
+shuttle-actix-web = "0.52.0"
+tokio = "1.0"
+log = "0.4"
+env_logger = "0.10.0"
+chrono = "0.4"
+reqwest = { version = "0.11", features = ["json"] }
+mockito = "1.2.0"
+
+[profile.dev]
+opt-level = 0           # No optimization - faster compilation, slower runtime
+debug = true           # Include debug information
+split-debuginfo = "unpacked"  # Faster linking time
+debug-assertions = true      # Enable debug assertions
