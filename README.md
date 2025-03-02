@@ -1,5 +1,9 @@
 # 3f50d327d2834007a371d2819adeccb0
 
+# App Demo
+
+https://jenni-interview-assessment-demo.vercel.app/
+
 # AI Text Paraphrasing App
 
 A modern web application that allows users to paraphrase text using AI. The application consists of a React TypeScript frontend and a Rust backend that leverages OpenAI's API for text paraphrasing.

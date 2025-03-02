@@ -110,3 +110,8 @@ export const logger = {
     console.log('Developer logs disabled');
   },
 };
+
+// Expose logger to window object for debugging
+if (typeof window !== 'undefined') {
+  (window as any).logger = logger;
+}
